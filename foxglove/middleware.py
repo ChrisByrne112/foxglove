@@ -390,8 +390,13 @@ async def get_cloudflare_ips() -> List[IPRangeCounter]:
     """
 
     async def get_ips(v: Literal[4, 6]) -> List[IPRangeCounter]:
-        r = await glove.http.get(f'https://www.cloudflare.com/ips-v{v}')
-        UnexpectedResponse.check(r)
+        try:
+            r = await glove.http.get(f'https://www.cloudflare.com/ips-v{v}', follow_redirects=True)
+            UnexpectedResponse.check(r)
+        except ValueError:
+            logger.critical('unhandled error in get_ips', exc_info=True)
+            raise
+
         return [IPRangeCounter(ip) for ip in r.text.strip().split('\n')]
 
     v4_ips, v6_ips = await asyncio.gather(get_ips(4), get_ips(6))
